@@ -154,7 +154,7 @@ class CardItem {
     Object.assign(this.style, CardItem.colorType[val])
   }
 }
-import audio from '/audio/click.mp3'
+// import audio from '/audio/click.mp3'
 export default {
   data() {
     return {
