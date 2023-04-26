@@ -461,6 +461,12 @@ export const asyncRoutes = [
         name: 'Test',
         component: () => import('@/views/Tests/test9'),
         meta: { title: '羊了个羊' }
+      },
+      {
+        path: 'test0',
+        name: 'Test',
+        component: () => import('@/views/Tests/test0'),
+        meta: { title: '羊了个羊~~~' }
       }
     ]
   },
