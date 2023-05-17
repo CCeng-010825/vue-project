@@ -23,9 +23,15 @@ import { mapGetters } from 'vuex'
 import Logo from './Logo'
 import SidebarItem from './SidebarItem'
 import variables from '@/styles/variables.scss'
+// import { computed, reactive } from 'vue'
 
 export default {
   components: { SidebarItem, Logo },
+  data() {
+    return {
+      // activeMenu: ''
+    }
+  },
   computed: {
     ...mapGetters([
       'sidebar'
@@ -37,12 +43,23 @@ export default {
     activeMenu() {
       const route = this.$route
       const { meta, path } = route
+      console.log(meta, 'meat')
       // if set path, the sidebar will highlight the path you set
       if (meta.activeMenu) {
+        console.log(meta.activeMenu, 'ppppp')
         return meta.activeMenu
       }
+      console.log(path, 'path')
       return path
     },
+    // const activeMenu=computed(()=>{
+    //   const route=this.$route
+    //   const {meta,path}=route
+    //   if(meta.activeMenu){
+    //     return meta.activeMenu
+    //   }
+    //   return path
+    // }),
     showLogo() {
       return this.$store.state.settings.sidebarLogo
     },

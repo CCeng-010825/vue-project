@@ -1,9 +1,15 @@
 <template>
   <div class="container">
     羊了个羊
+    <!-- <Test9 @iiiiiiiii="get" /> -->
     <!-- <div class="intro" /> -->
     <div class="box">
-      <div class="card-wrap" :style="cardWrapStyle">
+      <div v-if="show" class="intro">
+        <h1>{{ !fail ? 'You Win！🎉' : 'You Lose!😢' }}</h1>
+        <el-button @click="rePlay">再来一轮</el-button>
+        <el-button @click="setting">难度调节</el-button>
+      </div>
+      <div v-else class="card-wrap" :style="cardWrapStyle">
         <div
           v-for="item in cardItemList"
           id="tag"
@@ -46,15 +52,20 @@
             cardItemList.length + penddingList.length + saveList.length + clearList.length
           }}
         </p>
-      </div>
-      <div class="tools">
-        道具：
-        <el-button size="small" :disabled="!tools.save" @click="getThreeCard">
-          取出三张卡片
-        </el-button>
-        <el-button size="small" :disabled="!tools.rand" @click="rand">随机</el-button>
-        <el-button size="small" @click="initGame">再来一轮</el-button>
-        <el-button size="small" @click="setting">游戏设置</el-button>
+        <div class="tools">
+          <div class="button">
+            <span>道具：</span>
+            <el-button size="small" :disabled="!tools.save" @click="getThreeCard">
+              取出三张卡片
+            </el-button>
+            <el-button size="small" @click="revoke">
+              回退
+            </el-button>
+            <el-button size="small" :disabled="!tools.rand" @click="rand">随机</el-button>
+            <el-button size="small" @click="initGame">再来一轮</el-button>
+            <el-button size="small" @click="setting">游戏设置</el-button>
+          </div>
+        </div>
       </div>
     </div>
     <el-drawer title="游戏设置" :visible.sync="drawer" size="25%">
@@ -93,10 +104,22 @@
         <el-button size="mini" @click="drawer = false">取消</el-button>
       </div>
     </el-drawer>
+    <audio ref="clickAudio" src="/audio/click.mp3" style="display: none" controls />
+    <audio ref="dropAudioRef" style="display: none" controls src="/audio/drop.mp3" />
+    <audio ref="winAudioRef" style="display: none" controls src="/audio/win.mp3" />
+    <audio ref="loseAudioRef" style="display: none" controls src="/audio/lose.mp3" />
+    <audio
+      ref="welAudioRef"
+      style="display: none"
+      controls
+      src="/audio/welcome.mp3"
+      muted="muted"
+    />
   </div>
 </template>
 
 <script>
+// import Test9 from '../test9'
 class CardItem {
   static x = 20
   static y = 21
@@ -155,13 +178,17 @@ class CardItem {
   }
 }
 // import audio from '/audio/click.mp3'
+import _ from 'lodash'
+
 export default {
+  // components: { Test9 },
   data() {
     return {
       cardItemList: [],
       xUnit: 0,
       yUnit: 0,
       style: '',
+      lastItem: [],
       drawerOption: {
         x: 0,
         y: 0,
@@ -184,15 +211,15 @@ export default {
         0: '3',
         14: '14'
       },
+      removeFlag: false,
       drawer: false,
       cardMap: [],
-      // cardItemList: [],
+      fail: false,
+      show: false,
       penddingList: [],
       clearList: [],
       saveList: [],
       calcValueList: [],
-      // xUnit: 0,
-      // yUnit: 0,
       tools: {
         save: true,
         rand: true
@@ -214,45 +241,83 @@ export default {
   },
   mounted() {
     this.initGame()
+    // Bus.$on('option', (data) => {
+    //   console.log(data, 'dataaaaaaaaaaaaaaaaaaaaaaaaa')
+    // })
   },
   methods: {
+    // get(value) {
+    //   console.log(value, 'emitttttttttttttttttt')
+    // },
+    rePlay() {
+      this.initGame()
+      this.show = false
+    },
+    revoke() {
+      // 撤销两种情况，第一种没有被消除，则点击元素原路返回即可。第二种情况，撤销前的点击元素刚好3个，元素被消除，此时应从clearlist中取回元素
+      // console.log(this.penddingList, 'revoke')
+      // console.log(this.lastItem)
+      // console.log(this.penddingList, 'revoke')
+      if (this.penddingList && this.penddingList.length > 0) {
+        const item = this.penddingList.pop()
+        // const index = this.lastItem.indexOf(item)
+        const oldItem = this.lastItem.find(i => { return i.key === item.key })
+        this.calcValueList[item.val]--
+        item.style.top = oldItem.style.top
+        item.style.left = oldItem.style.left
+        this.cardItemList.push(item)
+        this.calcCover()
+      }
+      // if (this.removeFlag) {
+      //   // console.log('ooooooo')
+      //   const arr = this.clearList.slice(this.clearList.length - 3, this.clearList.length)
+      //   console.log(arr)
+      //   // this.penddingList.filter()
+      // }
+    },
     setting() {
       this.drawer = true
       Object.assign(this.drawerOption, this.option)
     },
     initGame() {
+      // this.$refs.welAudioRef.play()
+      // console.log(this.$refs.welAudioRef)
+      // setTimeout(() => {
+      //   this.$refs.welAudioRef.play()
+      // }, 100)
       this.getMap(this.option)
       this.penddingList = []
       this.clearList = []
       this.saveList = []
       this.tools.save = true
       this.tools.rand = true
-      this.setCardValue({ maxCardType: Number(this.option.maxCardType) })
       this.calcCover()
+      this.setCardValue({ maxCardType: Number(this.option.maxCardType) })
+      // setTimeout(() => {
+      //   console.log(this, 'thisss')
+      // }, 500)
     },
     // x=6 y=4 z=8
     getMap({ x, y, z, cardRandom }) {
       const cardMap = this.initGameMap({ x, y, z })
       const cardItemList = []
       let key = 0
-      console.log(cardMap)
+      // console.log(cardMap)
       // const maxWidth = (x - 1) * 2
       // const maxHeight = (y - 1) * 2
+      /**
+       * x=6,y=4,z=8
+       * cardRandom=0.3
+       */
       for (let k = 0; k < z; k++) {
         const shrinkSpeed = 3
-        const shrink = Math.floor((z - k - 1) / shrinkSpeed)
-        const shrinkX = Math.min(Math.floor(this.xUnit / 2) - 2, shrink)
-        const shrinkY = Math.min(Math.floor(this.yUnit / 2) - 2, shrink)
-        // const shrink = Math.floor((z - k - 1) / shrinkSpeed)
-        // 行对称  从上到下
-        for (let i = shrinkY; i < this.yUnit - 1 - shrinkY; i++) {
-          // 列对称 从左到右
-          for (let j = shrinkX; j < Math.ceil((this.xUnit - 1) / 2); j++) {
+        const shrink = Math.floor((z - k) / shrinkSpeed)
+        for (let i = shrink; i < this.yUnit - 1 - shrink; i++) {
+          //  从上到下 从左到右
+          for (let j = shrink; j < Math.ceil((this.xUnit - shrink) / 2); j++) {
             let canSetCard = true
-
             // 左边
             if (j > 0 && cardMap[k][i][j - 1]) {
-              //   console.log(canSetCard)
               canSetCard = false
               // 上边
             } else if (i > 0 && cardMap[k][i - 1][j]) {
@@ -277,12 +342,7 @@ export default {
               const mirrorX = this.xUnit - 2 - j
               if (mirrorX > j) {
                 key++
-                const cardItem = new CardItem({
-                  x: mirrorX,
-                  y: i,
-                  z: k,
-                  key
-                })
+                const cardItem = new CardItem({ x: mirrorX, y: i, z: k, key })
                 cardMap[k][i][mirrorX] = cardItem
                 cardItemList.push(cardItem)
               }
@@ -290,22 +350,26 @@ export default {
           }
         }
       }
-      this.cardItemList = cardItemList
       cardItemList.reverse()
       for (let i = 1; i <= key % 3; i++) {
         const clearItem = cardItemList.pop()
         cardMap[clearItem.z][clearItem.y][clearItem.x] = 0
       }
       cardItemList.reverse()
-      this.cardMap = cardMap
       this.cardItemList = cardItemList
+      this.cardMap = cardMap
+      this.lastItem = _.cloneDeep(this.cardItemList)
+      // console.log(cardMap, 'map')
+      // this.cardItemList = cardItemList
     },
     calcCover() {
-      // 构建一个遮挡 map
-      const coverMap = new Array(this.yUnit)
-      for (let i = 0; i <= this.yUnit; i++) {
-        coverMap[i] = new Array(this.xUnit).fill(false)
-      }
+      let elements = []
+      setTimeout(() => {
+        elements = this.$refs.item
+        elements.forEach((item) => {
+          io.observe(item)
+        })
+      }, 800)
       var io = new IntersectionObserver(
         (elements) => {
           elements.forEach((item) => {
@@ -322,13 +386,30 @@ export default {
           trackVisibility: true
         }
       )
-      let elements = []
-      setTimeout(() => {
-        elements = this.$refs.item
-        elements.forEach((item) => {
-          io.observe(item)
-        })
-      }, 800)
+      // 构建一个遮挡 map
+      // const coverMap = new Array(this.yUnit)
+      // for (let i = 0; i < this.yUnit; i++) {
+      //   coverMap[i] = new Array(this.xUnit).fill(false)
+      // }
+      // for (let i = this.cardItemList.length - 1; i >= 0; i--) {
+      //   const item = this.cardItemList[i]
+      //   const { x, y } = item
+      //   if (coverMap[y][x]) {
+      //     item.cover = true
+      //   } else if (coverMap[y][x + 1]) {
+      //     item.cover = true
+      //   } else if (coverMap[y + 1][x + 1]) {
+      //     item.cover = true
+      //   } else if (coverMap[y + 1][x]) {
+      //     item.cover = true
+      //   } else {
+      //     item.cover = false
+      //   }
+      //   coverMap[y][x] = true
+      //   coverMap[y][x + 1] = true
+      //   coverMap[y + 1][x + 1] = true
+      //   coverMap[y + 1][x] = true
+      // }
     },
     initGameMap({ x, y, z }) {
       this.xUnit = x * 2
@@ -369,19 +450,29 @@ export default {
       })
     },
     clickCard(item) {
+      // console.log(this.$refs.clickAudio.play())
+      // this.removeThree()
+      // Object.assign(this.lastItem, item)
+      // console.log(item)
+      // return
+      this.removeFlag = false
+      this.lastItem.push(item)
+      this.$refs.clickAudio.play()
       this.penddingList.push(item)
       const index = this.cardItemList.indexOf(item)
       this.cardItemList = this.cardItemList
         .slice(0, index)
         .concat(this.cardItemList.slice(index + 1))
+      // console.log(this.cardItemList, 'list')
       this.calcCover()
       this.calcValueList[item.val]++
       setTimeout(() => {
-        console.log(this.leftOffset)
+        // console.log(this.leftOffset)
         item.style.top = '160%'
         item.style.left =
           this.leftOffset + (this.penddingList.length - 1) * CardItem.x * 2 + 'px'
-      }, 0)
+        this.$refs.dropAudioRef.play()
+      }, 100)
       setTimeout(() => {
         this.removeThree()
       }, 0)
@@ -413,14 +504,26 @@ export default {
             item.style.left = this.leftOffset + index * CardItem.x * 2 + 'px'
           })
           this.calcValueList[item.val] = 0
+          this.removeFlag = true
+        }
+        if (this.cardItemList.length === 0) {
+          this.$refs.winAudioRef.play()
+          this.fail = false
+          this.show = true
         }
       })
+      if (this.penddingList.length >= 7) {
+        this.$refs.loseAudioRef.play()
+        this.fail = true
+        this.show = true
+      }
     },
     getThreeCard() {
       // 取出三张卡片
       if (!this.tools.save) {
         return
       }
+      this.$refs.dropAudioRef.play()
       this.tools.save = false
       this.saveList = this.penddingList.slice(0, 3)
       this.saveList.forEach((item, index) => {
@@ -465,9 +568,10 @@ export default {
       this.calcCover()
     },
     submit() {
-      console.log(this.option)
+      // console.log(this.option)
       Object.assign(this.option, this.drawerOption)
       this.initGame()
+      this.show = false
       this.drawer = false
     }
   }
@@ -478,10 +582,14 @@ export default {
 .container {
   // display: flex;
   .box {
+    // display: flex;
     position: relative;
+    .intro {
+      text-align: center;
+    }
     .card-wrap {
       position: relative;
-      margin: 5% auto 0 auto;
+      margin: 15% auto 0 auto;
       .card-item {
         font-size: 28px;
         text-align: center;
@@ -505,34 +613,40 @@ export default {
         box-shadow: 0px 3px 0 0 #999, 0 8px 0 0 #666, 0 8px 0 2px #000, 0 0 0 2px #000;
       }
 
-      .item-cover:after {
+      .item-cover::after {
+        position: absolute;
+        background: #000;
         border-radius: 2px;
         content: '';
-        position: absolute;
         width: 100%;
         height: 100%;
         left: 0;
         top: 0;
-        background: #000;
         opacity: 0.55;
       }
 
       .card-tips {
         white-space: nowrap;
         position: absolute;
-        left: 50%;
-        top: 140%;
-        transform: translate(-50%, 0);
+        top: 130%;
+        transform: translate(15%, 0);
         pointer-events: none;
       }
-    }
-    .tools {
-      position: absolute;
-      // margin: 10% auto 0 auto;
-      top: 200%;
-      text-align: center;
-      left: 0;
-      width: 100%;
+      .tools {
+        position: absolute;
+        top: 190%;
+        left: 0;
+        transform: translate(-20%, 0);
+        .button {
+          display: flex;
+          span {
+            display: flex;
+            width: 50px;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+      }
     }
   }
   .slid {

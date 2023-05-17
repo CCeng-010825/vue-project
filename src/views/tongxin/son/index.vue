@@ -13,6 +13,7 @@
 
 <script>
 import Grandson from '../grandson/index.vue'
+import bus from '@/common/bus'
 export default {
   components: { Grandson },
   //   model: {
@@ -49,6 +50,9 @@ export default {
     //   this.msg = '哈啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊'
     //   console.log('skkkkkkkkkkowpkokdoj')
       this.$emit('fn', '我是子组件')
+      bus.$on('ma', data => {
+        console.log(data)
+      })
     },
     handle() {
       console.log('handle')

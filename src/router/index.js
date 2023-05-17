@@ -456,11 +456,17 @@ export const asyncRoutes = [
         component: () => import('@/views/Tests/test8'),
         meta: { title: 'd378' }
       },
+      // {
+      //   path: 'test9',
+      //   name: 'Test',
+      //   component: () => import('@/views/Tests/test9'),
+      //   meta: { title: '羊了个羊' }
+      // },
       {
-        path: 'test9',
+        path: 'test10',
         name: 'Test',
-        component: () => import('@/views/Tests/test9'),
-        meta: { title: '羊了个羊' }
+        component: () => import('@/views/Tests/test10'),
+        meta: { title: 'test' }
       },
       {
         path: 'test0',

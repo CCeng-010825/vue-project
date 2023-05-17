@@ -95,11 +95,15 @@
       <button :disabled="!tools.save" @click="saveCard">取出3个卡片</button>
       <button :disabled="!tools.rand" @click="randCard">随机</button>
       <button @click="rePlay">再来一轮</button>
+      <el-button size="small" @click="revoke">
+        撤销
+      </el-button>
     </div>
   </div>
 </template>
 
 <script>
+import Bus from '@/common/bus'
 
 class CardItem {
   static x = 20;
@@ -157,8 +161,8 @@ class CardItem {
     Object.assign(this.style, CardItem.colorType[val])
   }
 }
-
 export default {
+  name: 'Test9',
   data() {
     return {
       option: {
@@ -199,10 +203,24 @@ export default {
   },
   methods: {
     // 随即生成卡片
+    revoke() {
+      // 撤销两种情况，第一种没有被消除，则点击元素原路返回即可。第二种情况，撤销前的点击元素刚好3个，元素被消除，此时应从clearlist中取回元素
+      console.log(this.penddingList, 'revoke')
+      const item = this.penddingList.pop()
+      this.cardItemList.push(item)
+      this.penddingList = this.penddingList.slice(this.penddingList.length - 1, 1)
+      console.log(item)
+      item.style.top = '-160%'
+      item.style.left = 0
+      setTimeout(() => {
+      }, 0)
+      this.calcCover()
+    },
     randCard() {
       if (!this.tools.rand) {
         return
       }
+      Bus.$emit('option', this.option)
       this.tools.rand = false
       const length = this.cardItemList.length
       this.cardItemList.forEach((item) => {
@@ -392,37 +410,21 @@ export default {
     },
     // 计算遮挡关系
     calcCover() {
-      // 构建一个遮挡 map
-      // const view = new IntersectionObserver(([change]) => {
-      //   console.log(change.isVisible, 'oooooooooooooooo') // 被覆盖就是false，反之true
-      // }, {
-      //   threshold: [1.0],
-      //   delay: 1000,
-      //   trackVisibility: true
-      // })
-      // view.observe(this.cardItemList)
       const coverMap = new Array(this.yUnit)
       for (let i = 0; i <= this.yUnit; i++) {
         coverMap[i] = new Array(this.xUnit).fill(false)
       }
-      console.log(coverMap, '11111')
-      // return
       // 从后往前，后面的层数高
       for (let i = this.cardItemList.length - 1; i >= 0; i--) {
         const item = this.cardItemList[i]
         const { x, y, z } = item
-        // if (coverMap[y][x]) {
-        //   item.cover = true
-        // } else if (coverMap[y][x + 1]) {
-        //   item.cover = true
-        // } else if (coverMap[y + 1][x]) {
-        //   item.cover = true
-        // } else if (coverMap[y + 1][x + 1]) {
-        //   item.cover = true
-        // } else {
-        //   item.cover = false
-        // }
-        if (coverMap[y][x] || coverMap[y][x + 1] || coverMap[y + 1][x] || coverMap[y + 1][x + 1]) {
+        if (coverMap[y][x]) {
+          item.cover = true
+        } else if (coverMap[y][x + 1]) {
+          item.cover = true
+        } else if (coverMap[y + 1][x]) {
+          item.cover = true
+        } else if (coverMap[y + 1][x + 1]) {
           item.cover = true
         } else {
           item.cover = false
@@ -478,6 +480,8 @@ export default {
     },
     // 点击卡片
     clickCard(item) {
+      this.$emit('iiiiiiiii', this.option)
+
       clearTimeout(this.timer)
       this.removeThree()
       this.penddingList.push(item)
@@ -515,7 +519,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .box {
   position: relative;
 }

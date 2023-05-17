@@ -17,6 +17,7 @@
 </template>
 <script>
 import Son from '../son/index.vue'
+import bus from '@/common/bus'
 export default {
   /**
      * 1.props传递数据
@@ -41,6 +42,7 @@ export default {
     console.log(this.$children, '000000000000000000000')
     // this.$root.foo = 2
     console.log(this.$root.foo)
+    bus.$emit(this.ma, 'ma')
   },
   methods: {
     fn(e) {

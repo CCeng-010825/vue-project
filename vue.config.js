@@ -120,7 +120,6 @@ module.exports = {
         symbolId: 'icon-[name]'
       })
       .end()
-
     config
       .when(process.env.NODE_ENV !== 'development',
         config => {
